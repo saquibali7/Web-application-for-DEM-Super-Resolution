@@ -1,0 +1,13 @@
+.heading{
+    background-color: #277BC0;
+    height: 100px;
+    padding: 15px;
+}
+
+body {
+    background-color: #FFF4CF;
+
+background-image: url("https://transparenttextures.com/patterns/45-degree-fabric-light.png");
+/* This is mostly intended for prototyping; please download the pattern and re-host for production environments. Thank you! */
+    
+}
