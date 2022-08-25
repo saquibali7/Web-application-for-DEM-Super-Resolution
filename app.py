@@ -15,7 +15,7 @@ from albumentations.pytorch import ToTensorV2
 from werkzeug.utils import secure_filename
 import torch
 import rasterio
-
+import cv2
 
 
 
@@ -36,13 +36,15 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif', 'tif'])
 
 transformsmain = transforms.Compose([
-	transforms.ToTensor(),
 	transforms.Resize((128,128)),
+	transforms.ToTensor(),
 ])
 
 def out_img(img):
 	img = img/10500
-	img  = transformsmain(img)
+	print(img.shape)
+	img = img[:,0:128,0:128]
+	img  = torch.from_numpy(img)
 	print(img.shape)
 	img = img.unsqueeze(0)
 	print(img.shape)
@@ -60,7 +62,16 @@ def display_image(filename):
 	return redirect(url_for('static', filename='uploads/temp.jpeg'),  code=301)
 
 
-	
+def normalize(im):
+	MIN_H = -500.0
+	MAX_H = 10000.0
+	im = (im - MIN_H)/(MAX_H-MIN_H)
+	im = im*255
+	im = im.astype(int)
+	print(im.max(), im.min())
+	return im
+
+
 @app.route('/')
 def upload_form():
 	return render_template('index.html')
@@ -77,18 +88,20 @@ def upload_image():
 	if file and allowed_file(file.filename):
 		filename = secure_filename(file.filename)
 		file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-		img_arr = np.array(Image.open(f'static/uploads/{filename}'))
-		print(img_arr.shape)
-		out_im = out_img(img_arr)
-		img = Image.fromarray(img_arr,'RGB')
+		img_arr = rasterio.open(f'static/uploads/{filename}')
+		img = img_arr.read()
+		out_im = out_img(img)
+		img = normalize(img)
+		img = img[0]
+		print(img.shape)
+		cv2.imwrite(f'static/uploads/trial.png', img)
+		img = Image.fromarray(img,'RGB')
 		img.save("static/uploads/temp.jpeg")
 		out_im = np.transpose(out_im[0], (1,2,0))
-		out_im = Image.fromarray(out_im, 'RGB')
-		out_im.save("static/uploads/out.jpeg")
+		cv2.imwrite(f'static/uploads/out.png', out_im)
+		# out_im = Image.fromarray(out_im, 'RGB')
+		# out_im.save("static/uploads/out.jpeg")
 		flash('Image successfully uploaded and displayed below')
-		print(filename)
-		file_url1 = url_for('display_image', filename='temp.jpeg')
-		print(file_url1)
 		return render_template('index.html', filename='temp.jpeg')
 	else:
 		flash('Allowed image types are -> png, jpg, jpeg, gif, tiff')
