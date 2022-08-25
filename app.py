@@ -48,12 +48,16 @@ def out_img(img):
 	img = img[:,k:k+128,k:k+128]
 	img  = torch.from_numpy(img)
 	print(img.shape)
+	m = nn.UpsamplingBilinear2d(scale_factor=2)
+
 	img = img.unsqueeze(0)
 	print(img.shape)
 	img = img.float()
+	bi_out = m(img)
 	out = model(img)
+	bi_out=bi_out.numpy()
 	out = out.detach().numpy()
-	return img, out
+	return img, out, bi_out
 
 
 def allowed_file(filename):
@@ -89,7 +93,7 @@ def upload_image():
 		file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 		img_arr = rasterio.open(f'static/uploads/{filename}')
 		img = img_arr.read()
-		img, out_im = out_img(img)
+		img, out_im, bi_out = out_img(img)
 		img = img[0]
 		img = img*255
 		img = img.numpy()
@@ -102,6 +106,10 @@ def upload_image():
 		out_im = out_im*255
 		out_im = out_im.astype(int)
 		cv2.imwrite(f'static/uploads/out.png', out_im)
+		bi_out = np.transpose(bi_out[0], (1,2,0))
+		bi_out = bi_out*255
+		bi_out= bi_out.astype(int)
+		cv2.imwrite(f'static/uploads/bi_out.png', bi_out)
 		# out_im = Image.fromarray(out_im, 'RGB')
 		# out_im.save("static/uploads/out.jpeg")
 		flash('Image successfully uploaded and displayed below')
