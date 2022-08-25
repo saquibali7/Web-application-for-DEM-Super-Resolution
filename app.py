@@ -1,6 +1,7 @@
 import numpy as np
+import os
 from PIL import Image
-from flask import Flask, render_template, request, redirect, session, send_from_directory
+from flask import Flask,flash, render_template, request, redirect, session, send_from_directory
 from flask import redirect, send_file, url_for
 from flask_session import Session
 from flask_uploads import UploadSet, configure_uploads, IMAGES
@@ -17,63 +18,58 @@ import torch
 model = MobileSR()
 
 
-transform2 = A.Compose([
-       A.Resize(128, 128),
-       ToTensorV2(),
-])
 
-transform2 = transforms.Compose([
-    transforms.PILToTensor()
-])
-
-
-from flask_wtf import FlaskForm
+UPLOAD_FOLDER = 'static/uploads/'
 
 app = Flask(__name__)
-
-img_arr= np.random.random((128,128))
-
-app.config['SECRET_KEY'] = 'jwfhiuwehfuie'
-app.config['UPLOADED_PHOTOS_DEST'] = 'Images'
-photos = UploadSet('photos', IMAGES)
-configure_uploads(app, photos)
-
-class MyForm(FlaskForm):
-    photo = FileField(
-        validators=[
-            FileAllowed(photos, 'Images only!'),
-            FileRequired('File was empty!')
-        ]
-    )
-    submit = SubmitField('Upload')
-    
-
-@app.route('/upload/<filename>')
-def get_file(filename):
-    return send_from_directory(app.config['UPLOADED_PHOTOS_DEST'], filename)
+app.secret_key = "secret key"
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    form = MyForm()
-    if form.validate_on_submit():
-        filename = photos.save(form.photo.data)
-        img_arr = np.array(Image.open(f'Images/{filename}'))
-        # img = transform2(img_arr)
-        im = Image.fromarray(img_arr)
-        im = im.convert("L")
-        im.save("Images/gen.jpeg")
-        # img = transform(image=img_arr)['image']
+ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif', 'tif'])
 
-        
-        # out = model(img)
-        file_url = url_for('get_file', filename=filename)
-        file_url1 = url_for('get_file', filename='gen.jpeg')
-        return render_template('index.html', form=form, file_url = file_url, file_url1=file_url1)
-        
-    else :
-        file_url = None
-    return render_template('index.html', form=form)
+def allowed_file(filename):
+	return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-if __name__ == '__main__':
-    app.run(debug=True)      
+@app.route('/display/<filename>')
+def display_image(filename):
+	# return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+	return redirect(url_for('static', filename='uploads/temp.jpeg'),  code=301)
+
+
+	
+@app.route('/')
+def upload_form():
+	return render_template('index.html')
+
+@app.route('/', methods=['POST'])
+def upload_image():
+	if 'file' not in request.files:
+		flash('No file part')
+		return redirect(request.url)
+	file = request.files['file']
+	if file.filename == '':
+		flash('No image selected for uploading')
+		return redirect(request.url)
+	if file and allowed_file(file.filename):
+		filename = secure_filename(file.filename)
+		file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+		img = np.array(Image.open(f'static/uploads/{filename}'))
+		img = Image.fromarray(img)
+		img = img.convert("RGB")
+		img.save("static/uploads/temp.jpeg")
+		flash('Image successfully uploaded and displayed below')
+		print(filename)
+		file_url1 = url_for('display_image', filename='temp.jpeg')
+		print(file_url1)
+		# return render_template('index.html', file_url1=file_url1)
+		return render_template('index.html', filename='temp.jpeg')
+	else:
+		flash('Allowed image types are -> png, jpg, jpeg, gif, tiff')
+		return redirect(request.url)
+	return	render_template('index.html')
+
+
+if __name__ == "__main__":
+    app.run()
