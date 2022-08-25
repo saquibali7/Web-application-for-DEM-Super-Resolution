@@ -12,13 +12,37 @@
 </head>
 
 <body>
+
+    <script type="text/javascript"
+        src="https://assets.website-files.com/5e2755779d8b8ea1d6373797/5ea88e92dce9b4b66f165490_zoom.txt"></script>
+    <script>
+        jQuery(function () {
+
+            if (!$.fn.imagezoomsl) {
+
+                $('.msg').show();
+                return;
+            }
+            else $('.msg').hide();
+
+            // plugin initialization
+            $('.image').imagezoomsl({
+
+                innerzoommagnifier: true,
+                classmagnifier: "round-loope",
+                magnifiersize: [150, 150],
+                // disables the scrolling of the document with the mouse wheel when the cursor is over the image
+                disablewheel: false
+            });
+        });
+    </script>
     <div class="heading">
         <h2>DEM Super Resolution System</h2>
     </div>
     <div class="container">
         <div class="row">
             <div class="col-6 mx auto mt-5 text-center">
-                <h3 class="mb-5">Insert the image to be uploaded</h3>
+                <h3 class="mb-5">Insert the Low Resolution DEM</h3>
 
                 <form method="post" action="/" enctype="multipart/form-data">
                     <div class="row justify-content-center">
@@ -29,31 +53,31 @@
                             <input class="btn btn-primary" type="submit" value="Submit">
                         </div>
                     </div>
-                </div>
-                </form>
-            
-                
-                <!-- <p>
-                    {% with messages = get_flashed_messages() %}
-                    {% if messages %}
-                <ul>
-                    {% for message in messages %}
-                    <li>{{ message }}</li>
-                    {% endfor %}
-                </ul>
-                {% endif %}
-                {% endwith %}
-                </p> -->
-                <div class="row mt-5">
-                    {% if filename %}                    
-                        <img src="{{ url_for('display_image', filename=filename) }}" style="width : 400px;">
-                    {% endif %}
-                    {% if filename %}                    
-                        <img src="{{ url_for('display_image', filename=filename) }}" style="width : 400px;">
+            </div>
+            </form>
+            <div class="grid mt-5" style="display:flex; justify-content: space-around;">
+
+                <div class="g-col-4">
+                    {% if filename %}
+                    <h3 mb-5>Low Resolution DEM</h3>
+                    <img src="{{ url_for('display_image', filename=filename) }}" style="width : 400px;">
                     {% endif %}
                 </div>
-            
-        
+
+                <div class="g-col-4">
+                    {% if filename %}
+                    <h3 mb-5>High Resolution DEM</h3>
+                    <img class="image" src="static\uploads\out.jpeg" style="width : 400px;">
+                    {% endif %}
+                </div>
+
+                <div class="g-col-4">
+                    {% if filename %}
+                    <h3 mb-5>High Resolution DEM</h3>
+                    <img class="image" src="static\uploads\out.jpeg" style="width : 400px;">
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </div>
 </body>
