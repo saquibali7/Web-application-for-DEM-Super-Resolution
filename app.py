@@ -14,6 +14,7 @@ import albumentations as A
 from albumentations.pytorch import ToTensorV2
 from werkzeug.utils import secure_filename
 import torch
+import torch.nn as nn
 import rasterio
 import cv2
 
@@ -30,7 +31,7 @@ UPLOAD_FOLDER = 'static/uploads/'
 app = Flask(__name__)
 app.secret_key = "secret key"
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = 16 * 4096 * 4096
 
 
 ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif', 'tif'])
@@ -41,9 +42,10 @@ transformsmain = transforms.Compose([
 ])
 
 def out_img(img):
-	img = img/10500
+	img = normalize(img)
 	print(img.shape)
-	img = img[:,0:128,0:128]
+	k = int(np.random.randint(0,2500))
+	img = img[:,k:k+128,k:k+128]
 	img  = torch.from_numpy(img)
 	print(img.shape)
 	img = img.unsqueeze(0)
@@ -51,7 +53,7 @@ def out_img(img):
 	img = img.float()
 	out = model(img)
 	out = out.detach().numpy()
-	return out
+	return img, out
 
 
 def allowed_file(filename):
@@ -63,12 +65,9 @@ def display_image(filename):
 
 
 def normalize(im):
-	MIN_H = -500.0
-	MAX_H = 10000.0
+	MIN_H = im.min()
+	MAX_H = im.max()
 	im = (im - MIN_H)/(MAX_H-MIN_H)
-	im = im*255
-	im = im.astype(int)
-	print(im.max(), im.min())
 	return im
 
 
@@ -90,14 +89,18 @@ def upload_image():
 		file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 		img_arr = rasterio.open(f'static/uploads/{filename}')
 		img = img_arr.read()
-		out_im = out_img(img)
-		img = normalize(img)
+		img, out_im = out_img(img)
 		img = img[0]
-		print(img.shape)
+		img = img*255
+		img = img.numpy()
+		img = np.transpose(img, (1,2,0))
+		img = img.astype(int)
 		cv2.imwrite(f'static/uploads/trial.png', img)
 		img = Image.fromarray(img,'RGB')
 		img.save("static/uploads/temp.jpeg")
 		out_im = np.transpose(out_im[0], (1,2,0))
+		out_im = out_im*255
+		out_im = out_im.astype(int)
 		cv2.imwrite(f'static/uploads/out.png', out_im)
 		# out_im = Image.fromarray(out_im, 'RGB')
 		# out_im.save("static/uploads/out.jpeg")
