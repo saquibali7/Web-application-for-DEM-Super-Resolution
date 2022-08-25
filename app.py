@@ -1,5 +1,5 @@
-import numpy as np
 import os
+import numpy as np
 from PIL import Image
 from flask import Flask,flash, render_template, request, redirect, session, send_from_directory
 from flask import redirect, send_file, url_for
@@ -17,6 +17,12 @@ import torch
 import torch.nn as nn
 import rasterio
 import cv2
+
+import pandas as pd
+import json
+import plotly
+import plotly.express as px
+import plotly.graph_objects as go
 
 
 
@@ -38,20 +44,16 @@ ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif', 'tif'])
 
 transformsmain = transforms.Compose([
 	transforms.Resize((128,128)),
-	transforms.ToTensor(),
 ])
 
 def out_img(img):
 	img = normalize(img)
-	print(img.shape)
-	k = int(np.random.randint(0,2500))
-	img = img[:,k:k+128,k:k+128]
+	# k = int(np.random.randint(0,2500))
+	# img = img[:,k:k+128,k:k+128]
 	img  = torch.from_numpy(img)
-	print(img.shape)
+	img = transformsmain(img)
 	m = nn.UpsamplingBilinear2d(scale_factor=2)
-
 	img = img.unsqueeze(0)
-	print(img.shape)
 	img = img.float()
 	bi_out = m(img)
 	out = model(img)
@@ -102,6 +104,8 @@ def upload_image():
 		cv2.imwrite(f'static/uploads/trial.png', img)
 		img = Image.fromarray(img,'RGB')
 		img.save("static/uploads/temp.jpeg")
+		out_plt=out_im
+		print(out_plt.shape)
 		out_im = np.transpose(out_im[0], (1,2,0))
 		out_im = out_im*255
 		out_im = out_im.astype(int)
@@ -110,10 +114,35 @@ def upload_image():
 		bi_out = bi_out*255
 		bi_out= bi_out.astype(int)
 		cv2.imwrite(f'static/uploads/bi_out.png', bi_out)
-		# out_im = Image.fromarray(out_im, 'RGB')
-		# out_im.save("static/uploads/out.jpeg")
 		flash('Image successfully uploaded and displayed below')
-		return render_template('index.html', filename='temp.jpeg')
+
+		x = np.linspace(0,1,512)
+		y = np.linspace(0,1,512)
+
+
+		fig = go.Figure(data=[go.Surface(z=out_plt[0][0], x=x, y=y)])
+		fig.update_layout( autosize=False,
+                  width=500, height=500,
+                  margin=dict(l=65, r=50, b=65, t=90))
+		
+		fig.update_layout(
+			title='Ground Truth Depth Elevation Map',
+            scene = dict(xaxis_title='X AXIS TITLE',
+                yaxis_title='Y AXIS TITLE',
+                zaxis_title='Height',
+                zaxis = dict(nticks=4, range=[0,1],),),
+            width=700,
+            margin=dict(r=20, l=10, b=10, t=10))
+			
+		graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+
+
+
+
+
+
+		return render_template('index.html', filename='temp.jpeg', graphJSON=graphJSON)
+		# return render_template('index.html', graphJSON=graphJSON)
 	else:
 		flash('Allowed image types are -> png, jpg, jpeg, gif, tiff')
 		return redirect(request.url)

@@ -4,6 +4,11 @@
     padding: 15px;
 }
 
+.chart {
+    height: 100px;
+    width: 100px;
+}
+
 body {
     background-color: #FFF4CF;
 
