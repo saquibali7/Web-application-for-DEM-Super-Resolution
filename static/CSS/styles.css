@@ -18,5 +18,11 @@ background-image: url("https://transparenttextures.com/patterns/45-degree-fabric
 }
 
 .bottom {
-    height: 200px;
+    height: 300px;
+}
+
+.chart .rend {
+    margin-top: 100px;
+    margin: 50px;
+    height: 700px;
 }
